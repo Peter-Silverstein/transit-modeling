@@ -1,0 +1,384 @@
+---
+title: 'Initial Mapping'
+author: "Peter Silverstein"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+  fontsize: 10pt
+header-includes:
+- \usepackage{amsmath}
+- \usepackage{amsthm}
+- \usepackage{rotating}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### LIBRARIES
+```{r include=FALSE}
+# Loading Libraries
+library(sf)
+library(tmap)
+library(tidyverse)
+library(tidycensus)
+library(here)
+library(systemfonts)
+library(forcats)
+library(DBI)
+library(RSQLite)
+
+census_api_key("b04657cc5e7bc71a846e61ce45beb0b79b9f069f")
+
+ACSlist <- load_variables(2022, "acs5", cache = TRUE)
+```
+
+# Step 1: Initial Mapping
+
+## Goal: Print out a map of the Puget Sound Region (King, Kitsap, Pierce, and Snohomish counties) + some basic maps
+
+#### DATA LOADING: Tidycensus data for PSRC region
+```{r}
+# Loading Washington Tracts
+psrc_shp <- get_acs(state = "WA",
+                    county = c("King", "Kitsap", "Pierce", "Snohomish"),
+                          geography = "tract",
+                          variables = c(medincome = "B19013_001",
+                                        population = "B01003_001"),
+                          geometry = TRUE,
+                          keep_geo_vars = TRUE,
+                          year = 2022,
+                          output = "wide"
+                          ) %>%
+  mutate(GEOID = as.double(GEOID)) %>%
+  filter(ALAND != 0)
+
+# CRS Projection being done in UTM Zone 10N (NAD83) - EPSG:26910
+psrc_shp <- st_transform(psrc_shp, crs = 26910)
+```
+
+#### MAP: Median Income in PSRC Region
+```{r}
+# Mapping median income by tract
+psrc_medincome <- tm_shape(psrc_shp) + 
+  tm_polygons("medincomeE", 
+              style = "quantile",
+              palette = c("white","#002A18"),
+              title = "Median Income by Tract (Quantiles)",
+              border_col = "black",
+              lwd = 0.3) +
+  tm_layout(legend.outside = TRUE, 
+                        legend.outside.position = "right")
+psrc_medincome
+```
+
+#### MAP: Population Density in PSRC Region
+```{r}
+# Mapping Population Density
+psrc_shp <- psrc_shp %>%
+  mutate(ALAND_miles = ALAND/2589988) %>% # Converting sq meters->sq miles
+  mutate(pop_per_sqmile = populationE/ALAND_miles)
+
+psrc_medincome <- tm_shape(psrc_shp) + 
+  tm_polygons("pop_per_sqmile", 
+              style = "quantile",
+              palette = c("white","#D30029"),
+              title = "Tract Population per Square Mile (Quantiles)",
+              border_col = "black",
+              lwd = 0.3) +
+  tm_layout(legend.outside = TRUE, 
+                        legend.outside.position = "right")
+psrc_medincome
+```
+
+### Pretty Map
+
+#### DATA LOADING: WA and PSRC Geometries
+```{r}
+# Loading in geometries
+# Loading in WA Polygons
+wa_polygons <- get_acs(state = "WA",
+                          geography = "tract",
+                          variables = c(medincome = "B19013_001",
+                                        population = "B01003_001"),
+                          geometry = TRUE,
+                          keep_geo_vars = TRUE,
+                          year = 2022,
+                          output = "wide"
+                          ) %>%
+  filter(ALAND != 0)
+wa_polygons <- st_transform(wa_polygons, crs = 26910)
+
+# Loading PSRC Polygons
+psrc_polygons <- get_acs(state = "WA",
+                    county = c("King", "Kitsap", "Pierce", "Snohomish"),
+                          geography = "tract",
+                          variables = c(medincome = "B19013_001",
+                                        population = "B01003_001"),
+                          geometry = TRUE,
+                          keep_geo_vars = TRUE,
+                          year = 2022,
+                          output = "wide"
+                          ) %>%
+  filter(ALAND != 0)
+psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
+
+# Loading Transit Lines
+transit_lines <- st_read(here("geo-files",
+                              "WSDOT-Routes",
+                              "WSDOT_-_Transit_Routes.shp"))
+transit_lines <- st_transform(transit_lines, crs = 26910)
+
+psrc_bbox <- st_bbox(psrc_polygons) # setting up to be able to zoom on PSRC
+intersect_lines <- st_intersection(transit_lines, psrc_polygons)
+```
+
+#### MAP: PSRC Pretty Map
+```{r}
+title <- "Transit Lines in King, Kitsap, Snohomish, and Pierce Counties"
+
+pretty_psrc_transit <- tm_shape(wa_polygons, bbox = psrc_bbox, unit = "mi") + 
+  tm_polygons(border.col = "grey", lwd = 0.5) + 
+  tm_shape(psrc_polygons) + 
+  tm_polygons(col = "#002B58", border.col = "#9CCAFA", lwd = 0.5) +
+  tm_shape(transit_lines) +
+  tm_lines(col = "darkgrey") +
+  tm_shape(intersect_lines) +
+  tm_lines(col = "#ffc600", lwd = 0.4) +
+  tm_scale_bar(breaks = c(0, 5, 10, 15, 20), 
+               color.dark = "#152C0D",
+               position = c("right","BOTTOM")) +
+  tm_compass(size = 2, position = c("LEFT", "bottom")) +
+  tm_add_legend(type = "line",
+                labels = "Transit Lines",
+                col = "#ffc600",
+                lwd = 2) +
+  tm_layout(main.title = title, 
+            main.title.size = 0.8,
+            inner.margins = c(0.05,0.05,0.05,0.05),
+            fontfamily = "serif",
+            compass.type = "rose",
+            bg.color = "lightblue",
+            legend.bg.color = "white",
+            legend.frame = TRUE,
+            legend.position = c("left","top"))
+
+pretty_psrc_transit
+```
+
+#### SAVING: PSRC Pretty Transit Map (*doesn't currently run*)
+```{r}
+#tmap_save(tm = pretty_psrc_transit, filename = "psrc_transit.png")
+```
+
+# Step 2: HST Mapping
+
+## Goal: HST Mapping
+
+#### DATA LOADING: Loading and manipulating PSRC data
+```{r}
+csv_file <- unzip(here("geo-files","Household_Travel_Survey_Trips.csv.zip"),"Household_Travel_Survey_Trips.csv")
+psrc_trips <- tibble(read.csv(csv_file))%>%
+  select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
+         "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
+         "origin_purpose", "dest_purpose", "mode_1", "travelers_total", 
+         "survey_year", "trip_weight", "origin_tract10", "dest_tract10",
+         "depart_time_hour","arrival_time_hour") %>%
+  mutate(mode_1 = as.factor(mode_1)) %>%
+  mutate(dest_purpose = as.factor(dest_purpose)) %>%
+  mutate(origin_purpose = as.factor(origin_purpose)) %>%
+  mutate(travel_dow = as.factor(travel_dow)) %>%
+  mutate(svy_complete = as.factor(svy_complete)) %>%
+  mutate(travelers_total = as.factor(travelers_total)) %>%
+  mutate(survey_year = as.factor(survey_year)) %>%
+  mutate(mode_collapsed = fct_collapse(mode_1, 
+                                       personalvehicle = c('Household vehicle 1','Other non-household vehicle','Car from work','Household vehicle 3','Household vehicle 2','Other hired service (Uber, Lyft, or other smartphone-app car service)',"Friend/colleague's car",'Other vehicle in household','Carshare service (e.g., Turo, Zipcar, ReachNow)','Rental car','Taxi (e.g., Yellow Cab)','Household vehicle 4','Other motorcycle/moped/scooter','Household vehicle 6','Other motorcycle/moped','Household vehicle 5','Household vehicle 7','Household vehicle 8','Personal scooter or moped (not shared)','Carshare service (e.g., Turo, Zipcar, Getaround, GIG)',"Other motorcycle (not my household's)",'Other hired car service (e.g., black car, limo)','Other motorcycle in household'),
+                                       masstransit = c('Bus (public transit)','Private bus or shuttle','Vanpool','Urban Rail (e.g., Link light rail, monorail)','School bus','Ferry or water taxi','Other rail (e.g., streetcar)','Other bus (rMove only)','Paratransit','Commuter rail (Sounder, Amtrak)','Urban Rail (e.g., Link light rail, monorail, streetcar)','Other rail'),
+                                       activetransit = c('Bicycle or e-bike (rSurvey only)','Walk (or jog/wheelchair)','Skateboard or rollerblade',"Standard bicycle (my household's)","Electric bicycle (my household's)",'Bike-share - electric bicycle','Other rented bicycle',"Borrowed bicycle (e.g., a friend's)",'Bike-share - standard bicycle','Bike-share bicycle (rMove only)','Bicycle owned by my household (rMove only)','Borrowed bicycle (e.g., from a friend) (rMove only)','Other rented bicycle (rMove only)'),
+                                       other = c('Other mode (e.g., skateboard, kayak, motorhome, etc.)','Airplane or helicopter','Scooter or e-scooter (e.g., Lime, Bird, Razor)','Scooter-share (e.g., Bird, Lime)','Other scooter, moped, skateboard','Vehicle ferry (took vehicle on board)','Segway or Onewheel/electric unicycle'))) %>%
+  filter(svy_complete == "Complete") %>%
+  filter(distance_miles <= 150) %>%
+  filter(distance_miles > 0) %>%
+  filter(duration_minutes > 0) %>%
+  filter(speed_mph <= 150) %>%
+  filter(mode_1 != "Missing Response")
+psrc_trips
+```
+
+#### DATA MANIPULATION: Summarizing HST Data by Tract and Joining to Shapes
+
+*I need to redo this -- currently all the counts and averages are based on departures only*
+
+```{r}
+# Departure count by tract
+departure_count <- psrc_trips %>%
+  group_by(origin_tract10) %>%
+  summarize(departure_count = n()) %>%
+  rename(GEOID = origin_tract10)
+
+# Arrival count by tract
+arrival_count <- psrc_trips %>%
+  group_by(dest_tract10) %>%
+  summarize(arrival_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Rush hour (AM) trip count by tract
+departure_count_rushAM <- psrc_trips %>%
+  filter(depart_time_hour > 5 & depart_time_hour <=10) %>%
+  group_by(origin_tract10) %>%
+  summarize(departure_count_rushAM = n()) %>%
+  rename(GEOID = origin_tract10)
+
+arrival_count_rushAM <- psrc_trips %>%
+  filter(arrival_time_hour > 5 & depart_time_hour <=10) %>%
+  group_by(dest_tract10) %>%
+  summarize(arrival_count_rushAM = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Rush hour (PM) trip count by tract
+departure_count_rushPM <- psrc_trips %>%
+  filter(depart_time_hour > 17 & depart_time_hour <=20) %>%
+  group_by(origin_tract10) %>%
+  summarize(departure_count_rushPM = n()) %>%
+  rename(GEOID = origin_tract10)
+
+arrival_count_rushPM <- psrc_trips %>%
+  filter(arrival_time_hour > 17 & depart_time_hour <=20) %>%
+  group_by(dest_tract10) %>%
+  summarize(arrival_count_rushPM = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Mode count by Tract
+## personalvehicle
+personalvehicle_count <- psrc_trips %>%
+  filter(mode_collapsed == "personalvehicle") %>%
+  group_by(dest_tract10) %>%
+  summarize(personalvehicle_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## masstransit
+masstransit_count <- psrc_trips %>%
+  filter(mode_collapsed == "masstransit") %>%
+  group_by(dest_tract10) %>%
+  summarize(masstransit_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## activetransit
+activetransit_count <- psrc_trips %>%
+  filter(mode_collapsed == "activetransit") %>%
+  group_by(dest_tract10) %>%
+  summarize(activetransit_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## other
+other_count <- psrc_trips %>%
+  filter(mode_collapsed == "other") %>%
+  group_by(dest_tract10) %>%
+  summarize(other_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Average trip distance by tract
+avg_dist <- psrc_trips %>%
+  group_by(dest_tract10) %>%
+  summarize(avg_dist = mean(distance_miles)) %>%
+  rename(GEOID = dest_tract10)
+
+# Average speed per tract
+avg_speed_mph <- psrc_trips %>%
+  group_by(dest_tract10) %>%
+  summarize(avg_speed_mph = mean(speed_mph)) %>%
+  rename(GEOID = dest_tract10)
+
+# Trip duration (in minutes) per tract
+avg_duration_mins <- psrc_trips %>%
+  group_by(dest_tract10) %>%
+  summarize(avg_duration_mins = mean(duration_minutes)) %>%
+  rename(GEOID = dest_tract10)
+
+# Adding all these to psrc_attribute
+psrc_attribute <- psrc_shp %>%
+  left_join(departure_count, by = "GEOID") %>%
+  left_join(arrival_count, by = "GEOID") %>%
+  left_join(departure_count_rushAM, by = "GEOID") %>%
+  left_join(arrival_count_rushAM, by = "GEOID") %>%
+  left_join(departure_count_rushPM, by = "GEOID") %>%
+  left_join(arrival_count_rushPM, by = "GEOID") %>%
+  left_join(personalvehicle_count, by = "GEOID") %>%
+  left_join(masstransit_count, by = "GEOID") %>%
+  left_join(activetransit_count, by = "GEOID") %>%
+  left_join(other_count, by = "GEOID") %>%
+  left_join(avg_dist, by = "GEOID") %>%
+  left_join(avg_speed_mph, by = "GEOID") %>%
+  left_join(avg_duration_mins, by = "GEOID") %>%
+  # removing NA values in counts caused by an empty join
+  mutate(
+    departure_count = replace_na(departure_count, 0),
+    arrival_count = replace_na(arrival_count, 0),
+    departure_count_rushAM = replace_na(departure_count_rushAM, 0),
+    arrival_count_rushAM = replace_na(arrival_count_rushAM, 0),
+    departure_count_rushPM = replace_na(departure_count_rushPM, 0),
+    arrival_count_rushPM = replace_na(arrival_count_rushPM, 0),
+    personalvehicle_count = replace_na(personalvehicle_count, 0),
+    masstransit_count = replace_na(masstransit_count, 0),
+    activetransit_count = replace_na(activetransit_count, 0),
+    other_count = replace_na(other_count, 0)
+  )
+
+# Mode % by Tract
+```
+
+#### MAP: Distribution of Departures and Arrivals Across PSRC Region
+```{r}
+psrc_departures <- tm_shape(psrc_attribute, unit = "mi") +
+  tm_polygons("departure_count",
+              style = "quantile",
+              palette = c("white","#003903"),
+              title = "Departures",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_layout(legend.position = c("right","bottom"))
+
+psrc_arrivals <- tm_shape(psrc_attribute, unit = "mi") +
+  tm_polygons("arrival_count",
+              style = "quantile",
+              palette = c("white","#003903"),
+              title = "Arrivals",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_layout(legend.position = c("right","bottom"))
+
+tmap_arrange(psrc_departures, psrc_arrivals)
+```
+
+#### MAP: Average Trip Distance by Census Tract
+
+*Hmm, shouldn't this actually not look like this? Theoretically this would show people going far from home to downtown in the morning and then going far back home, which would even things out??*
+
+```{r}
+psrc_distances <- tm_shape(psrc_attribute, unit = "mi") +
+  tm_polygons("avg_dist",
+              style = "quantile",
+              palette = c("white","#003903"),
+              title = "Distance (Miles)",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_layout(legend.position = c("right","bottom"))
+
+psrc_distances
+```
+
+#### MAP: Average Trip Speed by Census Tract
+
+
+```{r}
+psrc_speed <- tm_shape(psrc_attribute, unit = "mi") +
+  tm_polygons("avg_speed_mph",
+              style = "quantile",
+              palette = c("white","#003903"),
+              title = "Speed (MPH)",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_layout(legend.position = c("right","bottom"))
+
+psrc_speed
+```

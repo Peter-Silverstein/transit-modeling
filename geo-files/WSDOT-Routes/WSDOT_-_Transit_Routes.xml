@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?><metadata>
+    <idinfo>
+        <citation>
+            <citeinfo>
+                <origin/>
+                <pubdate>20210511</pubdate>
+                <title>Transit Routes</title>
+                <geoform>vector digital data</geoform>
+                <onlink>https://data.wsdot.wa.gov/arcgis/rest/services/Shared/TransitData/MapServer/3</onlink>
+                <onlink>https://data.wsdot.wa.gov/geospatial/DOT_PubTrans/TransitRoutes.zip</onlink>
+            </citeinfo>
+        </citation>
+        <descript>
+            <abstract>This dataset provides information on fixed-route transit route lines for the State of Washington as of 8/14/23. Stop data was extracted from General Transit Feed Specification (GTFS) data. Because GTFS data is typically created and managed by each individual transit agency, WSDOT cannot guarantee the accuracy of these data.Most data points are provided direct from GTFS feeds according to the specification at https://gtfs.org/. The route_id field has been prepended with a code for each agency to ensure every route has a distinct route_id.Please send comments and questions to gtfs@wsdot.wa.gov</abstract>
+            <purpose>Fixed-route transit route lines for the State of Washington.</purpose>
+        </descript>
+        <timeperd>
+            <timeinfo>
+                <sngdate>
+                    <caldate>20220815</caldate>
+                </sngdate>
+            </timeinfo>
+            <current>Data collected during August 2022.</current>
+        </timeperd>
+        <status>
+            <progress>In work</progress>
+            <update>Annually</update>
+        </status>
+        <spdom>
+            <bounding>
+                <westbc>-124.673624</westbc>
+                <eastbc>-116.959824</eastbc>
+                <northbc>49.000082</northbc>
+                <southbc>45.318576</southbc>
+            </bounding>
+        </spdom>
+        <keywords>
+            <theme>
+                <themekt>None</themekt>
+                <themekey>bus routes</themekey>
+                <themekey>washington</themekey>
+                <themekey>transit</themekey>
+                <themekey>rural</themekey>
+                <themekey>tribes</themekey>
+                <themekey>multimodal</themekey>
+                <themekey>ferry</themekey>
+                <themekey>rail</themekey>
+            </theme>
+            <theme>
+                <themekt>ISO 19115 Topic Categories</themekt>
+                <themekey>transportation</themekey>
+            </theme>
+        </keywords>
+        <accconst>None</accconst>
+        <useconst>
+For Planning use only. The Washington State Department of Transportation (WSDOT) shall not be liable for any activity involving the use of the data, including, but not limited to, lost profits or savings or any other economic or consequential damages. Nor does the WSDOT warrant the fitness of the data for use for a particular purpose, or the installation of the data, its use, or the results obtained.
+To the fullest extent permitted by law, the Data User shall hold harmless, defend at its own expense, and indemnify WSDOT, its officers, employees, agents, and volunteers, against any and all liability, claims, losses, damages, or expenses, including reasonable attorney’s fees, arising from all acts or omissions of the Data User or its officers, agents, or employees in its use of the WSDOT data.
+</useconst>
+        <ptcontac>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>Public Transportation Division, WSDOT</cntorg>
+                </cntorgp>
+                <cntaddr>
+                    <addrtype>mailing</addrtype>
+                    <city>Olympia</city>
+                    <state>WA</state>
+                    <postal>98504</postal>
+                </cntaddr>
+                <cntvoice>360-709-7976</cntvoice>
+                <cntemail>gtfs@wsdot.wa.gov</cntemail>
+            </cntinfo>
+        </ptcontac>
+        <datacred>Washington State Department of Transportation</datacred>
+        <native> Version 6.2 (Build 9200) ; Esri ArcGIS 10.9.1.28388</native>
+    </idinfo>
+    <dataqual>
+        <lineage>
+            <srcinfo>
+                <typesrc>None</typesrc>
+                <srccontr>Publicly-available GTFS feeds were acquired from TransitLand (https://transit.land/), TransitFeeds (http://transitfeeds.com/), and agency websites. All other GTFS feeds were acquired from or produced on behalf of transit agencies.</srccontr>
+            </srcinfo>
+            <procstep>
+                <procdesc>This data was created by compiling GTFS data feeds from transit agencies in the state, which were combined into a single GTFS feed using a Python utility published by the Puget Sound Regional Council (https://github.com/psrc/combine_gtfs_feeds), then processed by the ArcGIS Pro GTFS Shapes to Features utility.</procdesc>
+                <procdate>20221012</procdate>
+            </procstep>
+        </lineage>
+    </dataqual>
+    <spdoinfo>
+        <direct>Vector</direct>
+        <ptvctinf>
+            <sdtsterm>
+                <sdtstype>String</sdtstype>
+                <ptvctcnt>2026</ptvctcnt>
+            </sdtsterm>
+        </ptvctinf>
+    </spdoinfo>
+    <eainfo>
+        <detailed>
+            <enttyp>
+                <enttypl>TransitRoutes</enttypl>
+            </enttyp>
+            <attr>
+                <attrlabl>OBJECTID</attrlabl>
+                <attrdef>Internal feature number.</attrdef>
+                <attrdefs>Esri</attrdefs>
+                <attrdomv>
+                                                  
+                    
+                    <udom>Sequential unique whole numbers that are automatically generated.</udom>
+                                                
+                
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>shape_id</attrlabl>
+                <attrdef>Identifies a shape.
+
+Each route may be associated with one or more shapes. Each shape represents a pattern of stops served on certain trips.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#shapestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>agency_id</attrlabl>
+                <attrdef>Agency for the specified route.
+
+Conditionally Required:
+- Required if multiple agencies are defined in agency.txt.
+- Optional otherwise.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_id</attrlabl>
+                <attrdef>Identifies a route.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_short_name</attrlabl>
+                <attrdef>Short name of a route. Often a short, abstract identifier (e.g., "32", "100X", "Green") that riders use to identify a route. Both route_short_name and route_long_name may be defined.
+
+Conditionally Required:
+- Required if routes.route_long_name is empty.
+- Optional otherwise.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_long_name</attrlabl>
+                <attrdef>Full name of a route. This name is generally more descriptive than the route_short_name and often includes the route's destination or stop. Both route_short_name and route_long_name may be defined.
+
+Conditionally Required:
+- Required if routes.route_short_name is empty.
+- Optional otherwise.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_desc</attrlabl>
+                <attrdef>Description of a route that provides useful, quality information. Should not be a duplicate of route_short_name or route_long_name.
+Example: "A" trains operate between Inwood-207 St, Manhattan and Far Rockaway-Mott Avenue, Queens at all times. Also from about 6AM until about midnight, additional "A" trains operate between Inwood-207 St and Lefferts Boulevard (trains typically alternate between Lefferts Blvd and Far Rockaway).</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_type</attrlabl>
+                <attrdef>Indicates the type of transportation used on a route. Valid options are:
+
+0 - Tram, Streetcar, Light rail. Any light rail or street level system within a metropolitan area.
+1 - Subway, Metro. Any underground rail system within a metropolitan area.
+2 - Rail. Used for intercity or long-distance travel.
+3 - Bus. Used for short- and long-distance bus routes.
+4 - Ferry. Used for short- and long-distance boat service.
+5 - Cable tram. Used for street-level rail cars where the cable runs beneath the vehicle (e.g., cable car in San Francisco).
+6 - Aerial lift, suspended cable car (e.g., gondola lift, aerial tramway). Cable transport where cabins, cars, gondolas or open chairs are suspended by means of one or more cables.
+7 - Funicular. Any rail system designed for steep inclines.
+11 - Trolleybus. Electric buses that draw power from overhead wires using poles.
+12 - Monorail. Railway in which the track consists of a single rail or a beam.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_url</attrlabl>
+                <attrdef>URL of a web page about the particular route. Should be different from the agency.agency_url value.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_color</attrlabl>
+                <attrdef>Route color designation that matches public facing material. Defaults to white (FFFFFF) when omitted or left empty. The color difference between route_color and route_text_color should provide sufficient contrast when viewed on a black and white screen.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>route_text_color</attrlabl>
+                <attrdef>Legible color to use for text drawn against a background of route_color. Defaults to black (000000) when omitted or left empty. The color difference between route_color and route_text_color should provide sufficient contrast when viewed on a black and white screen.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>continuous_pickup</attrlabl>
+                <attrdef>Indicates that the rider can board the transit vehicle at any point along the vehicle’s travel path as described by shapes.txt, on every trip of the route. Valid options are:
+
+0 - Continuous stopping pickup.
+1 or empty - No continuous stopping pickup.
+2 - Must phone agency to arrange continuous stopping pickup.
+3 - Must coordinate with driver to arrange continuous stopping pickup.
+
+Values for routes.continuous_pickup may be overridden by defining values in stop_times.continuous_pickup for specific stop_times along the route.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>continuous_drop_off</attrlabl>
+                <attrdef> Indicates that the rider can alight from the transit vehicle at any point along the vehicle’s travel path as described by shapes.txt, on every trip of the route. Valid options are:
+
+0 - Continuous stopping drop off.
+1 or empty - No continuous stopping drop off.
+2 - Must phone agency to arrange continuous stopping drop off.
+3 - Must coordinate with driver to arrange continuous stopping drop off.
+
+Values for routes.continuous_drop_off may be overridden by defining values in stop_times.continuous_drop_off for specific stop_times along the route.</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#routestxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>Shape</attrlabl>
+                <attrdef>Feature geometry.</attrdef>
+                <attrdefs>Esri</attrdefs>
+                <attrdomv>
+                                                  
+                    
+                    <udom>Coordinates defining the features.</udom>
+                                                
+                
+                </attrdomv>
+            </attr>
+            <attr>
+                <attrlabl>agency_name</attrlabl>
+                <attrdef>Full name of the transit agency</attrdef>
+                <attrdefs>https://gtfs.org/schedule/reference/#agencytxt</attrdefs>
+            </attr>
+            <attr>
+                <attrlabl>GlobalID</attrlabl>
+            </attr>
+            <attr>
+                <attrlabl>Shape.STLength()</attrlabl>
+            </attr>
+        </detailed>
+    </eainfo>
+    <distinfo>
+        <distrib>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>Washington State Department of Transportation, Office of Information Technology</cntorg>
+                    <cntper>Jordyn Mitchell</cntper>
+                </cntorgp>
+                <cntpos>GIS Database Administrator</cntpos>
+                <cntemail>jordyn.mitchell@wsdot.wa.gov</cntemail>
+            </cntinfo>
+        </distrib>
+        <distliab>The Washington State Department of Transportation shall not be liable for any activity involving this data with regard to lost profits or savings or any other consequential damages; or the fitness for use of the data for a particular purpose; or the installation of the data, its use, or the results obtained.</distliab>
+        <custom>Download individual data sets from https://gisdata-wsdot.opendata.arcgis.com</custom>
+    </distinfo>
+    <metainfo>
+        <metd>20240105</metd>
+        <metc>
+            <cntinfo>
+                <cntorgp>
+                    <cntorg>Public Transportation Division, WSDOT</cntorg>
+                </cntorgp>
+                <cntaddr>
+                    <addrtype>mailing</addrtype>
+                    <city>Olympia</city>
+                    <state>WA</state>
+                    <postal>98504</postal>
+                </cntaddr>
+                <cntvoice>360-709-7976</cntvoice>
+                <cntemail>gtfs@wsdot.wa.gov</cntemail>
+            </cntinfo>
+        </metc>
+        <metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+        <metstdv>FGDC-STD-001-1998</metstdv>
+        <mettc>local time</mettc>
+    </metainfo>
+</metadata>
