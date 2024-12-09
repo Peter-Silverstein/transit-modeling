@@ -170,7 +170,113 @@ questions above.
   the Trips dataset from the HTS. Each observation in the dataset
   represents a single trip taken by a respondent and includes a variety
   of variables. Most important for my analysis are origin/destination
-  tract,
+  tract and mode of travel, although the dataset also includes date,
+  time, distance, speed, etc.
+\item
+  All \textbf{census tract-level ACS 2022 5-year estimates for
+  demographic data and the associated geometries} were accessed via the
+  R \texttt{tidycensus} package, which leverages an API connection to
+  the US Census Bureau to provide US Census data for a specified
+  geographic area.
+\item
+  Finally, \textbf{Stanford's Cities and Towns of the United States,
+  2014} dataset provided point data to allow me to add city labels to my
+  maps for reference.
 \end{enumerate}
+
+\subsection{Data Preparation/Spatial Data
+Management:}\label{data-preparationspatial-data-management}
+
+\subsubsection{Data Cleaning}\label{data-cleaning}
+
+The output from \texttt{tidycensus} is already quite clean, so the
+majority of data cleaning steps were conducted on the PSRC HTS dataset.
+After loading the dataset, I selected my columns of interest and
+converted their types where appropriate and useful (e.g., string to
+factor). The next step was to collapse the mode of travel column from
+around 50 unique responses (an artifact of (a) a very detailed survey
+and (b) some option changes over the years of the survey) to just 4
+useful categories, outlined below:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \emph{Mass Transit:} included in this category trips that used a metro
+  bus, private bus or shuttle, urban rail/light rail, school bus, ferry,
+  paratransit, and commuter rail. Essentially I included any
+  multi-occupancy transit vehicle.
+\item
+  \emph{Personal Vehicle:} trips including all single-occupancy motor
+  vehicles. This includes personal cars, ride-shares, taxis,
+  motorcycles, and car-share services.
+\item
+  \emph{Active Transit:} included walking, running, biking, and
+  skateboarding.
+\item
+  \emph{Other:} included helicopter/plane, ``other'' responses.
+\end{enumerate}
+
+I then implemented a number of filters to filter data that didn't pass
+muster for realism/were outside the scope of this question. This
+included the following operations:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Filtered non-complete survey responses
+\item
+  Filtered distance to the range of 0 to 150 miles
+\item
+  Filtered trip duration to only include those greater than 0 minutes
+\item
+  Filtered speed to exclude speeds greater than 150 mph
+\item
+  Filtered to remove observations with missing value for travel mode
+\end{enumerate}
+
+\subsubsection{Spatial Joins}\label{spatial-joins}
+
+The next step was to count the number of trips and join these values to
+the geometries/ACS data from tidyverse. I used the \texttt{summarize()}
+function to count the number of total trips and number of trips per
+category for each census tracts. I then joined these counts to my
+geometry table via the \texttt{left\_join()} function and matched on
+GEOID. Further, I removed any tracts from the analysis with 0 total
+trips. I acknowledge that this is a bit of a simplistic solution to
+missingness and will discuss it further in my analysis and conclusions.
+Finally, I calculated the percentage of trips in each tract that were
+made by mass transit mode (count of mass transit / count of total
+trips).
+
+\subsection{GIS Methodology Overview}\label{gis-methodology-overview}
+
+\subsubsection{Manipulation/Analytical Methods
+Used}\label{manipulationanalytical-methods-used}
+
+As mentioned above, I counted the number of trips inside each census
+tract, then converted the total trip and mass transit trip counts to
+percentage. Finally, I used a simple join function to associate the
+counts with their respective geometries.
+
+For the analysis in this project, I will perform a global cluster
+analysis (using Moran's I) and visualize any hot and cold zones using
+Getis-Ord Gi*. These approaches should help me understand whether
+transit use is clustered and visualize where it is clustered. I will
+then run a Spatial Error Model (SEM) and a Spatial Lag Model (SLM)
+regressing mass transit percentage on population density, median income,
+and median age. I believe that the SEM is the better conceptual choice -
+I believe that it is likely that unmeasured factors (e.g., land use,
+transit quality/reliability, parking availability) are spatially
+correlated, while the idea that ridership in one tract influences
+another is a bit harder to intuit. That said, I will run both models in
+order to compare the results.
+
+\subsubsection{Software Used}\label{software-used}
+
+All data loading, cleaning, and manipulation, mapping (both choropleth
+and Getis-Ord Gi*), table-creation, and analysis write up were performed
+with R and R-Studio.
 
 \end{document}

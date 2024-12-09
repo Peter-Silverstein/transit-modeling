@@ -80,30 +80,37 @@ The output from `tidycensus` is already quite clean, so the majority of data cle
 3. *Active Transit:* included walking, running, biking, and skateboarding.
 4. *Other:* included helicopter/plane, "other" responses.
 
-I then implemented a number of filters to filter data that didn't pass muster for realism. This included the following operations:
+I then implemented a number of filters to filter data that didn't pass muster for realism/were outside the scope of this question. This included the following operations:
 
-1. 
+1. Filtered non-complete survey responses
+2. Filtered distance to the range of 0 to 150 miles
+3. Filtered trip duration to only include those greater than 0 minutes
+4. Filtered speed to exclude speeds greater than 150 mph
+5. Filtered to remove observations with missing value for travel mode
 
 ### Spatial Joins
+The next step was to count the number of trips and join these values to the geometries/ACS data from tidyverse. I used the `summarize()` function to count the number of total trips and number of trips per category for each census tracts. I then joined these counts to my geometry table via the `left_join()` function and matched on GEOID. Further, I removed any tracts from the analysis with 0 total trips. I acknowledge that this is a bit of a simplistic solution to missingness and will discuss it further in my analysis and conclusions. Finally, I calculated the percentage of trips in each tract that were made by mass transit mode (count of mass transit / count of total trips).
 
 ```{r include=FALSE}
-# Loading PSRC Polygons
+# Loading PSRC Polygons and census data
 psrc_polygons <- get_acs(state = "WA",
                     county = c("King", "Kitsap", "Pierce", "Snohomish"),
                           geography = "tract",
                           variables = c(medincome = "B19013_001",
-                                        population = "B01003_001"), # need to add age to this
+                                        population = "B01003_001",
+                                        medage = "B01002_001"),
                           geometry = TRUE,
                           keep_geo_vars = TRUE,
                           year = 2022,
                           output = "wide"
                           ) %>%
-  filter(ALAND != 0) %>%
+  filter(ALAND != 0) %>% # Filter tracts that are 100% water
   mutate(GEOID = as.double(GEOID))
 psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
 
 # Loading my PSRC Household Survey Data
-psrc_trips <- tibble(read.csv(here("Household_Travel_Survey_Trips.csv")) %>%
+csv_file <- unzip(here("geo-files","Household_Travel_Survey_Trips.csv.zip"),"Household_Travel_Survey_Trips.csv")
+psrc_trips <- tibble(read.csv(here(csv_file)) %>%
   select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
          "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
          "origin_purpose", "dest_purpose", "mode_1", "travelers_total", 
@@ -116,11 +123,64 @@ psrc_trips <- tibble(read.csv(here("Household_Travel_Survey_Trips.csv")) %>%
   mutate(svy_complete = as.factor(svy_complete)) %>%
   mutate(travelers_total = as.factor(travelers_total)) %>%
   mutate(survey_year = as.factor(survey_year)) %>%
+  # Collapsing the travel mode categories into 4 umbrella categories
   mutate(mode_collapsed = fct_collapse(mode_1, 
-                                       personalvehicle = c('Household vehicle 1','Other non-household vehicle','Car from work','Household vehicle 3','Household vehicle 2','Other hired service (Uber, Lyft, or other smartphone-app car service)',"Friend/colleague's car",'Other vehicle in household','Carshare service (e.g., Turo, Zipcar, ReachNow)','Rental car','Taxi (e.g., Yellow Cab)','Household vehicle 4','Other motorcycle/moped/scooter','Household vehicle 6','Other motorcycle/moped','Household vehicle 5','Household vehicle 7','Household vehicle 8','Personal scooter or moped (not shared)','Carshare service (e.g., Turo, Zipcar, Getaround, GIG)',"Other motorcycle (not my household's)",'Other hired car service (e.g., black car, limo)','Other motorcycle in household'),
-                                       masstransit = c('Bus (public transit)','Private bus or shuttle','Vanpool','Urban Rail (e.g., Link light rail, monorail)','School bus','Ferry or water taxi','Other rail (e.g., streetcar)','Other bus (rMove only)','Paratransit','Commuter rail (Sounder, Amtrak)','Urban Rail (e.g., Link light rail, monorail, streetcar)','Other rail'),
-                                       activetransit = c('Bicycle or e-bike (rSurvey only)','Walk (or jog/wheelchair)','Skateboard or rollerblade',"Standard bicycle (my household's)","Electric bicycle (my household's)",'Bike-share - electric bicycle','Other rented bicycle',"Borrowed bicycle (e.g., a friend's)",'Bike-share - standard bicycle','Bike-share bicycle (rMove only)','Bicycle owned by my household (rMove only)','Borrowed bicycle (e.g., from a friend) (rMove only)','Other rented bicycle (rMove only)'),
-                                       other = c('Other mode (e.g., skateboard, kayak, motorhome, etc.)','Airplane or helicopter','Scooter or e-scooter (e.g., Lime, Bird, Razor)','Scooter-share (e.g., Bird, Lime)','Other scooter, moped, skateboard','Vehicle ferry (took vehicle on board)','Segway or Onewheel/electric unicycle'))) %>%
+                    personalvehicle = c('Household vehicle 1',
+                                        'Other non-household vehicle',
+                                        'Car from work',
+                                        'Household vehicle 3',
+                                        'Household vehicle 2',
+                                        'Other hired service (Uber, Lyft, or other smartphone-app car service)',
+                                        "Friend/colleague's car",
+                                        'Other vehicle in household',
+                                        'Carshare service (e.g., Turo, Zipcar, ReachNow)'
+                                        ,'Rental car',
+                                        'Taxi (e.g., Yellow Cab)',
+                                        'Household vehicle 4',
+                                        'Other motorcycle/moped/scooter',
+                                        'Household vehicle 6',
+                                        'Other motorcycle/moped',
+                                        'Household vehicle 5',
+                                        'Household vehicle 7',
+                                        'Household vehicle 8',
+                                        'Personal scooter or moped (not shared)',
+                                        'Carshare service (e.g., Turo, Zipcar, Getaround, GIG)',
+                                        "Other motorcycle (not my household's)",
+                                        'Other hired car service (e.g., black car, limo)',
+                                        'Other motorcycle in household'),
+                    masstransit = c('Bus (public transit)',
+                                    'Private bus or shuttle',
+                                    'Vanpool',
+                                    'Urban Rail (e.g., Link light rail, monorail)',
+                                    'School bus',
+                                    'Ferry or water taxi',
+                                    'Other rail (e.g., streetcar)',
+                                    'Other bus (rMove only)',
+                                    'Paratransit',
+                                    'Commuter rail (Sounder, Amtrak)',
+                                    'Urban Rail (e.g., Link light rail, monorail, streetcar)',
+                                    'Other rail'),
+                   activetransit = c('Bicycle or e-bike (rSurvey only)',
+                                     'Walk (or jog/wheelchair)',
+                                     'Skateboard or rollerblade',
+                                     "Standard bicycle (my household's)",
+                                     "Electric bicycle (my household's)",
+                                     'Bike-share - electric bicycle',
+                                     'Other rented bicycle',
+                                     "Borrowed bicycle (e.g., a friend's)",
+                                     'Bike-share - standard bicycle',
+                                     'Bike-share bicycle (rMove only)',
+                                     'Bicycle owned by my household (rMove only)',
+                                     'Borrowed bicycle (e.g., from a friend) (rMove only)',
+                                     'Other rented bicycle (rMove only)'),
+                   other = c('Other mode (e.g., skateboard, kayak, motorhome, etc.)',
+                             'Airplane or helicopter',
+                             'Scooter or e-scooter (e.g., Lime, Bird, Razor)',
+                             'Scooter-share (e.g., Bird, Lime)',
+                             'Other scooter, moped, skateboard',
+                             'Vehicle ferry (took vehicle on board)',
+                             'Segway or Onewheel/electric unicycle'))) %>%
+  # Filtering out fishy and irrelevant responses
   filter(svy_complete == "Complete") %>%
   filter(distance_miles <= 150) %>%
   filter(distance_miles > 0) %>%
@@ -128,69 +188,57 @@ psrc_trips <- tibble(read.csv(here("Household_Travel_Survey_Trips.csv")) %>%
   filter(speed_mph <= 150) %>%
   filter(mode_1 != "Missing Response")
 
-# Doing some data manipulation, all based on departures
 # Departure count by tract
 departure <- psrc_trips %>%
   group_by(origin_tract10) %>%
   summarize(departure_count = n()) %>%
   rename(GEOID = origin_tract10)
 
-# Mode count by Tract
-## personalvehicle
-personalvehicle <- psrc_trips %>%
-  filter(mode_collapsed == "personalvehicle") %>%
-  group_by(dest_tract10) %>%
-  summarize(personalvehicle_count = n()) %>%
-  rename(GEOID = dest_tract10)
-
-## masstransit
+# Mass Transit trip count by departure tract
 masstransit <- psrc_trips %>%
   filter(mode_collapsed == "masstransit") %>%
   group_by(dest_tract10) %>%
   summarize(masstransit_count = n()) %>%
   rename(GEOID = dest_tract10)
 
-## activetransit
-activetransit <- psrc_trips %>%
-  filter(mode_collapsed == "activetransit") %>%
-  group_by(dest_tract10) %>%
-  summarize(activetransit_count = n()) %>%
-  rename(GEOID = dest_tract10)
-
-## other
-other <- psrc_trips %>%
-  filter(mode_collapsed == "other") %>%
-  group_by(dest_tract10) %>%
-  summarize(other_count = n()) %>%
-  rename(GEOID = dest_tract10)
-
-# Adding all these to psrc_table
+# Joining to the psrc_polygons table
 psrc_table <- psrc_polygons %>%
   mutate(ALAND_miles = ALAND/2589988) %>% # Converting sq meters->sq miles
   mutate(pop_per_sqmile = populationE/ALAND_miles) %>%
   left_join(departure, by = "GEOID") %>%
-  left_join(personalvehicle, by = "GEOID") %>%
   left_join(masstransit, by = "GEOID") %>%
-  left_join(activetransit, by = "GEOID") %>%
-  left_join(other, by = "GEOID") %>%
-  # removing NA values in counts caused by an empty join
+  # Removing NA values in counts caused by an empty join
   mutate(
     departure_count = replace_na(departure_count, 0),
-    personalvehicle_count = replace_na(personalvehicle_count, 0),
-    masstransit_count = replace_na(masstransit_count, 0),
-    activetransit_count = replace_na(activetransit_count, 0),
-    other_count = replace_na(other_count, 0)
-  )
+    masstransit_count = replace_na(masstransit_count, 0)
+    ) %>%
+  filter(departure_count > 0)
   
-# masstransit as a percentage of all trips in the region
+# Calculating mass transit percentage
 psrc_table <- psrc_table %>%
   mutate(masstransit_perc = (masstransit_count / departure_count)*100) %>%
   mutate(masstransit_perc = replace_na(masstransit_perc, 0))
+
+# Loading US cities and towns for labeling
+cities <- st_as_sf(read_sf(dsn = here("geo-files",
+                             "UScitiestowns",
+                             "data_EPSG_4326",
+                             "citiesx010g.shp"))) %>%
+  filter(STATE == "WA") %>%
+  filter(NAME == "Seattle" | NAME == "Tacoma")
+
+cities <- st_transform(cities, crs = 26910)
 ```
 
+## GIS Methodology Overview
 
+### Manipulation/Analytical Methods Used
+As mentioned above, I counted the number of trips inside each census tract, then converted the total trip and mass transit trip counts to percentage. Finally, I used a simple join function to associate the counts with their respective geometries.
 
+For the analysis in this project, I will perform a global cluster analysis (using Moran's I) and visualize any hot and cold zones using Getis-Ord Gi*. These approaches should help me understand whether transit use is clustered and visualize where it is clustered. I will then run a Spatial Error Model (SEM) and a Spatial Lag Model (SLM) regressing mass transit percentage on population density, median income, and median age. I believe that the SEM is the better conceptual choice - I believe that it is likely that unmeasured factors (e.g., land use, transit quality/reliability, parking availability) are spatially correlated, while the idea that ridership in one tract influences another is a bit harder to intuit. That said, I will run both models in order to compare the results.
 
+### Software Used
+All data loading, cleaning, and manipulation, mapping (both choropleth and Getis-Ord Gi*), table-creation, and analysis write up were performed with R and R-Studio. 
 
 
 
