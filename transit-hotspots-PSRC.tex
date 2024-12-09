@@ -1,0 +1,176 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\usepackage{titling}
+\pretitle{\begin{center}\Huge\bfseries}
+\posttitle{\par\end{center}}
+\predate{\begin{center}\large}
+\postdate{\par\end{center}}
+\preauthor{\begin{center}\large}
+\postauthor{\par\end{center}}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{rotating}
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={Transit Usage in Seattle: A Spatial Investigation},
+  pdfauthor={Peter Silverstein},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Transit Usage in Seattle: A Spatial Investigation}
+\author{Peter Silverstein}
+\date{2024-12-09}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+    {\large Final Project}\\[0.5cm]
+    {\large GIS and Spatial Analysis}\\[0.5cm]
+    {\large QMSS5070}\\[0.5cm]
+\end{center}
+
+\newpage
+
+\section{Introduction}\label{introduction}
+
+\subsection{Research Question:}\label{research-question}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  How does transit usage percentage (percent of trips using mass transit
+  / total trips per census tract) vary spatially in and around Seattle
+  and Tacoma, Washington?
+\item
+  How does this variation relate to population density, median income,
+  and median age at the census tract level?
+\end{enumerate}
+
+\subsection{Purpose of Study:}\label{purpose-of-study}
+
+There are essentially two purposes to this study. The first is to better
+understand where there are concentrations of high and low transit usage
+around the region. If there is clustering and we see hotspots and
+coldspots, further policy-focused questions can be asked. For example:
+given clustering, what characteristics of a census tract makes in more
+or less likely to be in one of these hot or cold zones? How might we
+allocate resources across hot zones, cold zones, and those in-between to
+increase the adoption of transit by commuters? Is the dispersion of
+transit availability closely related to the demand and does the
+dispersion favor certain demographic groups over others?
+
+The second research question is a very basic attempt at answering one of
+these follow-up questions. By understanding how the three variables
+(population density, median income, and median age) are related to the
+outcome of interest (percentage of commuter trips taken using public
+transit), we can begin to fill in the knowledge gaps demonstrated by the
+questions above.
+
+\subsection{Hypotheses}\label{hypotheses}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  I believe we will see transit hotspots close to urban centers (e.g.,
+  Seattle and Tacoma, the two biggest cities in the region of interest).
+  Further, I believe the opposite will be true for coldspots--they
+  should exist further outside urban centers. These ideas are based on
+  the fact that transit lines themselves tend to be clustered in
+  high-density, urban areas, meaning opportunities for mass transit
+  travel are more convenient and plentiful in more central urban areas.
+\item
+  I expect that transit use percentage is positively associated with
+  population density and median income and negatively associated with
+  age. I make this hypothesis about population density based on the
+  reasoning above. I expect younger people to (a) be more likely to live
+  in highly urban areas and (b) be less likely to own a personal vehicle
+  (such as a car). Of the three variables, I am the least confident
+  about median income, because I think the relationship could be pulled
+  in both positive and negative directions. On one hand, urban areas
+  tend to be more expensive and thus have a higher requirement for
+  income to live there. On the other hand, lower income should be
+  associated with lower rates of car ownership and thus lower income
+  would be associated with higher transit ridership.
+\end{enumerate}
+
+\section{Data and Methodology:}\label{data-and-methodology}
+
+\subsection{Data Sources:}\label{data-sources}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  The \textbf{Puget Sound Regional Association (PSRC) Household Travel
+  Survey (HTS) 2017-23} is a biennial survey of commuters done in the
+  King, Kitsap, Pierce, and Snohomish counties of Washington state (the
+  counties surrounding Seattle and Tacoma). The present analysis uses
+  the Trips dataset from the HTS. Each observation in the dataset
+  represents a single trip taken by a respondent and includes a variety
+  of variables. Most important for my analysis are origin/destination
+  tract,
+\end{enumerate}
+
+\end{document}

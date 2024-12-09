@@ -1,0 +1,243 @@
+---
+title: 'Transit Usage in Seattle: A Spatial Investigation'
+author: "Peter Silverstein"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+      keep_tex: true
+  fontsize: 12pt
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\Huge\bfseries}
+  - \posttitle{\par\end{center}}
+  - \predate{\begin{center}\large}
+  - \postdate{\par\end{center}}
+  - \preauthor{\begin{center}\large}
+  - \postauthor{\par\end{center}}
+  - \usepackage{amsmath}
+  - \usepackage{amsthm}
+  - \usepackage{rotating}
+---
+\begin{center}
+    {\large Final Project}\\[0.5cm]
+    {\large GIS and Spatial Analysis}\\[0.5cm]
+    {\large QMSS5070}\\[0.5cm]
+\end{center}
+
+\newpage
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+# Loading Libraries
+library(sf)
+library(tmap)
+library(tidyverse)
+library(tidycensus)
+library(here)
+library(systemfonts)
+library(forcats)
+library(DBI)
+library(RSQLite)
+
+census_api_key("b04657cc5e7bc71a846e61ce45beb0b79b9f069f")
+
+ACSlist <- load_variables(2022, "acs5", cache = TRUE)
+```
+
+# Introduction
+## Research Question:
+
+1. How does transit usage percentage (percent of trips using mass transit / total trips per census tract) vary spatially in and around Seattle and Tacoma, Washington? 
+2. How does this variation relate to population density, median income, and median age at the census tract level?
+
+## Purpose of Study:
+There are essentially two purposes to this study. The first is to better understand where there are concentrations of high and low transit usage around the region. If there is clustering and we see hotspots and coldspots, further policy-focused questions can be asked. For example: given clustering, what characteristics of a census tract makes in more or less likely to be in one of these hot or cold zones? How might we allocate resources across hot zones, cold zones, and those in-between to increase the adoption of transit by commuters? Is the dispersion of transit availability closely related to the demand and does the dispersion favor certain demographic groups over others?
+
+The second research question is a very basic attempt at answering one of these follow-up questions. By understanding how the three variables (population density, median income, and median age) are related to the outcome of interest (percentage of commuter trips taken using public transit), we can begin to fill in the knowledge gaps demonstrated by the questions above.
+
+## Hypotheses
+
+1. I believe we will see transit hotspots close to urban centers (e.g., Seattle and Tacoma, the two biggest cities in the region of interest). Further, I believe the opposite will be true for coldspots--they should exist further outside urban centers. These ideas are based on the fact that transit lines themselves tend to be clustered in high-density, urban areas, meaning opportunities for mass transit travel are more convenient and plentiful in more central urban areas.
+2. I expect that transit use percentage is positively associated with population density and median income and negatively associated with age. I make this hypothesis about population density based on the reasoning above. I expect younger people to (a) be more likely to live in highly urban areas and (b) be less likely to own a personal vehicle (such as a car). Of the three variables, I am the least confident about median income, because I think the relationship could be pulled in both positive and negative directions. On one hand, urban areas tend to be more expensive and thus have a higher requirement for income to live there. On the other hand, lower income should be associated with lower rates of car ownership and thus lower income would be associated with higher transit ridership.
+
+# Data and Methodology:
+
+## Data Sources:
+
+1. The **Puget Sound Regional Association (PSRC) Household Travel Survey (HTS) 2017-23** is a biennial survey of commuters done in the King, Kitsap, Pierce, and Snohomish counties of Washington state (the counties surrounding Seattle and Tacoma). The present analysis uses the Trips dataset from the HTS. Each observation in the dataset represents a single trip taken by a respondent and includes a variety of variables. Most important for my analysis are origin/destination tract and mode of travel, although the dataset also includes date, time, distance, speed, etc.
+2. All **census tract-level ACS 2022 5-year estimates for demographic data and the associated geometries** were accessed via the R `tidycensus` package, which leverages an API connection to the US Census Bureau to provide US Census data for a specified geographic area.
+3. Finally, **Stanford's Cities and Towns of the United States, 2014** dataset provided point data to allow me to add city lables to my maps for reference.
+
+## Data Preparation/Spatial Data Management:
+
+
+
+```{r include=FALSE}
+# Loading PSRC Polygons
+psrc_polygons <- get_acs(state = "WA",
+                    county = c("King", "Kitsap", "Pierce", "Snohomish"),
+                          geography = "tract",
+                          variables = c(medincome = "B19013_001",
+                                        population = "B01003_001"),
+                          geometry = TRUE,
+                          keep_geo_vars = TRUE,
+                          year = 2022,
+                          output = "wide"
+                          ) %>%
+  filter(ALAND != 0) %>%
+  mutate(GEOID = as.double(GEOID))
+psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
+
+# Loading my PSRC Household Survey Data
+psrc_trips <- tibble(read.csv(here("Household_Travel_Survey_Trips.csv")) %>%
+  select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
+         "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
+         "origin_purpose", "dest_purpose", "mode_1", "travelers_total", 
+         "survey_year", "trip_weight", "origin_tract10", "dest_tract10",
+         "depart_time_hour","arrival_time_hour")) %>%
+  mutate(mode_1 = as.factor(mode_1)) %>%
+  mutate(dest_purpose = as.factor(dest_purpose)) %>%
+  mutate(origin_purpose = as.factor(origin_purpose)) %>%
+  mutate(travel_dow = as.factor(travel_dow)) %>%
+  mutate(svy_complete = as.factor(svy_complete)) %>%
+  mutate(travelers_total = as.factor(travelers_total)) %>%
+  mutate(survey_year = as.factor(survey_year)) %>%
+  mutate(mode_collapsed = fct_collapse(mode_1, 
+                                       personalvehicle = c('Household vehicle 1','Other non-household vehicle','Car from work','Household vehicle 3','Household vehicle 2','Other hired service (Uber, Lyft, or other smartphone-app car service)',"Friend/colleague's car",'Other vehicle in household','Carshare service (e.g., Turo, Zipcar, ReachNow)','Rental car','Taxi (e.g., Yellow Cab)','Household vehicle 4','Other motorcycle/moped/scooter','Household vehicle 6','Other motorcycle/moped','Household vehicle 5','Household vehicle 7','Household vehicle 8','Personal scooter or moped (not shared)','Carshare service (e.g., Turo, Zipcar, Getaround, GIG)',"Other motorcycle (not my household's)",'Other hired car service (e.g., black car, limo)','Other motorcycle in household'),
+                                       masstransit = c('Bus (public transit)','Private bus or shuttle','Vanpool','Urban Rail (e.g., Link light rail, monorail)','School bus','Ferry or water taxi','Other rail (e.g., streetcar)','Other bus (rMove only)','Paratransit','Commuter rail (Sounder, Amtrak)','Urban Rail (e.g., Link light rail, monorail, streetcar)','Other rail'),
+                                       activetransit = c('Bicycle or e-bike (rSurvey only)','Walk (or jog/wheelchair)','Skateboard or rollerblade',"Standard bicycle (my household's)","Electric bicycle (my household's)",'Bike-share - electric bicycle','Other rented bicycle',"Borrowed bicycle (e.g., a friend's)",'Bike-share - standard bicycle','Bike-share bicycle (rMove only)','Bicycle owned by my household (rMove only)','Borrowed bicycle (e.g., from a friend) (rMove only)','Other rented bicycle (rMove only)'),
+                                       other = c('Other mode (e.g., skateboard, kayak, motorhome, etc.)','Airplane or helicopter','Scooter or e-scooter (e.g., Lime, Bird, Razor)','Scooter-share (e.g., Bird, Lime)','Other scooter, moped, skateboard','Vehicle ferry (took vehicle on board)','Segway or Onewheel/electric unicycle'))) %>%
+  filter(svy_complete == "Complete") %>%
+  filter(distance_miles <= 150) %>%
+  filter(distance_miles > 0) %>%
+  filter(duration_minutes > 0) %>%
+  filter(speed_mph <= 150) %>%
+  filter(mode_1 != "Missing Response")
+
+# Doing some data manipulation, all based on departures
+# Departure count by tract
+departure <- psrc_trips %>%
+  group_by(origin_tract10) %>%
+  summarize(departure_count = n()) %>%
+  rename(GEOID = origin_tract10)
+
+# Mode count by Tract
+## personalvehicle
+personalvehicle <- psrc_trips %>%
+  filter(mode_collapsed == "personalvehicle") %>%
+  group_by(dest_tract10) %>%
+  summarize(personalvehicle_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## masstransit
+masstransit <- psrc_trips %>%
+  filter(mode_collapsed == "masstransit") %>%
+  group_by(dest_tract10) %>%
+  summarize(masstransit_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## activetransit
+activetransit <- psrc_trips %>%
+  filter(mode_collapsed == "activetransit") %>%
+  group_by(dest_tract10) %>%
+  summarize(activetransit_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+## other
+other <- psrc_trips %>%
+  filter(mode_collapsed == "other") %>%
+  group_by(dest_tract10) %>%
+  summarize(other_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Adding all these to psrc_table
+psrc_table <- psrc_polygons %>%
+  mutate(ALAND_miles = ALAND/2589988) %>% # Converting sq meters->sq miles
+  mutate(pop_per_sqmile = populationE/ALAND_miles) %>%
+  left_join(departure, by = "GEOID") %>%
+  left_join(personalvehicle, by = "GEOID") %>%
+  left_join(masstransit, by = "GEOID") %>%
+  left_join(activetransit, by = "GEOID") %>%
+  left_join(other, by = "GEOID") %>%
+  # removing NA values in counts caused by an empty join
+  mutate(
+    departure_count = replace_na(departure_count, 0),
+    personalvehicle_count = replace_na(personalvehicle_count, 0),
+    masstransit_count = replace_na(masstransit_count, 0),
+    activetransit_count = replace_na(activetransit_count, 0),
+    other_count = replace_na(other_count, 0)
+  )
+  
+# masstransit as a percentage of all trips in the region
+psrc_table <- psrc_table %>%
+  mutate(masstransit_perc = (masstransit_count / departure_count)*100) %>%
+  mutate(masstransit_perc = replace_na(masstransit_perc, 0))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
