@@ -68,11 +68,23 @@ The second research question is a very basic attempt at answering one of these f
 
 1. The **Puget Sound Regional Association (PSRC) Household Travel Survey (HTS) 2017-23** is a biennial survey of commuters done in the King, Kitsap, Pierce, and Snohomish counties of Washington state (the counties surrounding Seattle and Tacoma). The present analysis uses the Trips dataset from the HTS. Each observation in the dataset represents a single trip taken by a respondent and includes a variety of variables. Most important for my analysis are origin/destination tract and mode of travel, although the dataset also includes date, time, distance, speed, etc.
 2. All **census tract-level ACS 2022 5-year estimates for demographic data and the associated geometries** were accessed via the R `tidycensus` package, which leverages an API connection to the US Census Bureau to provide US Census data for a specified geographic area.
-3. Finally, **Stanford's Cities and Towns of the United States, 2014** dataset provided point data to allow me to add city lables to my maps for reference.
+3. Finally, **Stanford's Cities and Towns of the United States, 2014** dataset provided point data to allow me to add city labels to my maps for reference.
 
 ## Data Preparation/Spatial Data Management:
 
+### Data Cleaning
+The output from `tidycensus` is already quite clean, so the majority of data cleaning steps were conducted on the PSRC HTS dataset. After loading the dataset, I selected my columns of interest and converted their types where appropriate and useful (e.g., string to factor). The next step was to collapse the mode of travel column from around 50 unique responses (an artifact of (a) a very detailed survey and (b) some option changes over the years of the survey) to just 4 useful categories, outlined below:
 
+1. *Mass Transit:* included in this category trips that used a metro bus, private bus or shuttle, urban rail/light rail, school bus, ferry, paratransit, and commuter rail. Essentially I included any multi-occupancy transit vehicle.
+2. *Personal Vehicle:* trips including all single-occupancy motor vehicles. This includes personal cars, ride-shares, taxis, motorcycles, and car-share services.
+3. *Active Transit:* included walking, running, biking, and skateboarding.
+4. *Other:* included helicopter/plane, "other" responses.
+
+I then implemented a number of filters to filter data that didn't pass muster for realism. This included the following operations:
+
+1. 
+
+### Spatial Joins
 
 ```{r include=FALSE}
 # Loading PSRC Polygons
@@ -80,7 +92,7 @@ psrc_polygons <- get_acs(state = "WA",
                     county = c("King", "Kitsap", "Pierce", "Snohomish"),
                           geography = "tract",
                           variables = c(medincome = "B19013_001",
-                                        population = "B01003_001"),
+                                        population = "B01003_001"), # need to add age to this
                           geometry = TRUE,
                           keep_geo_vars = TRUE,
                           year = 2022,
