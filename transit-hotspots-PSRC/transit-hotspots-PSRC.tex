@@ -279,8 +279,86 @@ All data loading, cleaning, and manipulation, mapping (both choropleth
 and Getis-Ord Gi*), table-creation, regression modeling, and write-up
 were performed with R and R-Studio.
 
+\newpage
+
 \section{Results and Analysis}\label{results-and-analysis}
 
+\subsection{Exploratory Data Analysis via Choropleth Mapping and
+Descriptive
+Tables}\label{exploratory-data-analysis-via-choropleth-mapping-and-descriptive-tables}
+
+I will begin the analysis portion of this project with some simple
+choropleth maps. The purpose of this mapping is to simply visualize the
+spatial patterning of the dependent and independent variables. While the
+actual significance testing and cluster analysis will give us a
+scientific understanding of the problem, many of the patterns we're
+looking for will be apparent with a simple eye test.
+
+\begin{figure}
+\centering
 \includegraphics{transit-hotspots-PSRC_files/figure-latex/unnamed-chunk-3-1.pdf}
+\caption{Sources: US Census ACS 2022 5-year estimates, Puget Sound
+Regional Countil, Cities and Towns of the US 2014, via Stanford
+University; Classification = jenks}
+\end{figure}
+
+Ignoring for a minute the top-end of the scale, it does seem that there
+are some clusters with higher transit usage and that these clusters tend
+to exist closer to the cities. Not only can we see that the apparent
+clustering occurs nearer to the two cities marked on the map, it also
+seems as though smaller census tracts tend to have higher mass transit
+percentages. As a general rule of thumb, smaller census tracts tend to
+be more urban, so this fits with my hypothesis that transit clustering
+will occur in more population dense areas. In the following maps, we can
+visually compare the pattern seen in this map to how each of the
+predictor variables vary spatially.
+
+\newpage
+
+\begin{figure}
+\centering
+\includegraphics{transit-hotspots-PSRC_files/figure-latex/unnamed-chunk-5-1.pdf}
+\caption{Sources: US Census ACS 2022 5-year estimates, Puget Sound
+Regional Countil, Cities and Towns of the US 2014, via Stanford
+University; Classification = jenks}
+\end{figure}
+
+As expected, population density is much higher in tracts close to the
+two cities (and throughout the generally-urban corridor between them).
+Again, visually comparing this pattern to the one seen for mass transit
+percentage, a lot matches up. This is not a perfect correspondence, of
+course.
+
+\newpage
+
+\begin{figure}
+\centering
+\includegraphics{transit-hotspots-PSRC_files/figure-latex/unnamed-chunk-6-1.pdf}
+\caption{Sources: US Census ACS 2022 5-year estimates, Puget Sound
+Regional Countil, Cities and Towns of the US 2014, via Stanford
+University; Classification = jenks}
+\end{figure}
+
+I find this map to be particularly interesting. Although it is not
+incredibly easy to compare this spatial pattern to the mass transit
+percentage one, I will direct your attention to the high-income area
+just East of Seattle. Comparing to the transit map, we can see a pretty
+obvious negative association between income and transit percentage. This
+provides an initial piece of evidence in favor of the hypothesis that
+higher income tracts are likely to have lower transit usage. In the same
+vein, a visual inspection of the tracts directly to the south of the
+Seattle marker shows an area of comparatively low median income. Again,
+cross-referencing this with the transit map, we can see this is an area
+of relatively high transit usage.
+
+\begin{figure}
+\centering
+\includegraphics{transit-hotspots-PSRC_files/figure-latex/unnamed-chunk-7-1.pdf}
+\caption{Sources: US Census ACS 2022 5-year estimates, Puget Sound
+Regional Countil, Cities and Towns of the US 2014, via Stanford
+University; Classification = jenks}
+\end{figure}
+
+\textbf{INSERT SOURCES}
 
 \end{document}

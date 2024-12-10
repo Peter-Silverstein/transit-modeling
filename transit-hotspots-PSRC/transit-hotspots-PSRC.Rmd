@@ -39,7 +39,6 @@ library(here)
 library(systemfonts)
 library(forcats)
 library(DBI)
-library(RSQLite)
 
 census_api_key("b04657cc5e7bc71a846e61ce45beb0b79b9f069f")
 
@@ -239,9 +238,15 @@ For the analysis in this project, I will perform a global cluster analysis (usin
 ### Software Used
 All data loading, cleaning, and manipulation, mapping (both choropleth and Getis-Ord Gi*), table-creation, regression modeling, and write-up were performed with R and R-Studio. 
 
+\newpage
+
 # Results and Analysis
 
-```{r echo=FALSE}
+## Exploratory Data Analysis via Choropleth Mapping and Descriptive Tables
+
+I will begin the analysis portion of this project with some simple choropleth maps. The purpose of this mapping is to simply visualize the spatial patterning of the dependent and independent variables. While the actual significance testing and cluster analysis will give us a scientific understanding of the problem, many of the patterns we're looking for will be apparent with a simple eye test.
+
+```{r echo=FALSE, fig.cap="Sources: US Census ACS 2022 5-year estimates, Puget Sound Regional Countil, Cities and Towns of the US 2014, via Stanford University; Classification = jenks"}
 title <- "Mass Transit Trips as a % of Total Trips (classification = Jenks)"
 
 # Creating callout lines and label positions for the cities
@@ -319,8 +324,142 @@ masstransit_choropleth <- tm_shape(psrc_table, unit = "mi") +
 masstransit_choropleth
 ```
 
+Ignoring for a minute the top-end of the scale, it does seem that there are some clusters with higher transit usage and that these clusters tend to exist closer to the cities. Not only can we see that the apparent clustering occurs nearer to the two cities marked on the map, it also seems as though smaller census tracts tend to have higher mass transit percentages. As a general rule of thumb, smaller census tracts tend to be more urban, so this fits with my hypothesis that transit clustering will occur in more population dense areas. In the following maps, we can visually compare the pattern seen in this map to how each of the predictor variables vary spatially.
+
+```{r echo=FALSE}
+# Creating a choropleth map for each predictor variable
+
+# Population Density
+title_popdens <- "Population Density by Census Tract (classification = quantiles)"
+
+popdens_choropleth <- tm_shape(psrc_table, unit = "mi") +
+  tm_polygons("pop_per_sqmile",
+              style = "quantile",
+              palette = c("white","darkred"),
+              title = "Pop per Sq. Mile",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_scale_bar(breaks = c(0, 5, 10, 15, 20), 
+               color.dark = "black",
+               position = c("right","BOTTOM")) +
+  tm_compass(size = 2, position = c("LEFT", "bottom")) +
+  tm_layout(main.title = title_popdens, 
+            main.title.size = 0.75,
+            main.title.fontface = "italic",
+            inner.margins = c(0.1,0.1,0.1,0.1),
+            fontfamily = "serif",
+            compass.type = "rose",
+            legend.bg.color = "white",
+            legend.frame = TRUE,
+            legend.position = c("left","top"),
+            legend.title.size = 1) +
+  tm_shape(cities) + # Add dots for Seattle and Tacoma
+  tm_dots(size = 0.1, 
+          col = "blue") +
+  tm_shape(callout_lines_sf) +
+  tm_lines(col = "black", 
+           lwd = 1) + # Add call-out lines
+  tm_shape(label_positions_sf) +
+  tm_text("city", 
+          size = 0.8, 
+          col = "black", 
+          fontface = "italic") # Add labels
+
+# Median Income
+title_medincome <- "Median Income by Census Tract (classification = quantiles)"
+
+medincome_choropleth <- tm_shape(psrc_table, unit = "mi") +
+  tm_polygons("medincomeE",
+              style = "quantile",
+              palette = c("white","darkgreen"),
+              title = "Median Income ($)",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_scale_bar(breaks = c(0, 5, 10, 15, 20), 
+               color.dark = "black",
+               position = c("right","BOTTOM")) +
+  tm_compass(size = 2, position = c("LEFT", "bottom")) +
+  tm_layout(main.title = title_medincome, 
+            main.title.size = 0.75,
+            main.title.fontface = "italic",
+            inner.margins = c(0.1,0.1,0.1,0.1),
+            fontfamily = "serif",
+            compass.type = "rose",
+            legend.bg.color = "white",
+            legend.frame = TRUE,
+            legend.position = c("left","top"),
+            legend.title.size = 1) +
+  tm_shape(cities) + # Add dots for Seattle and Tacoma
+  tm_dots(size = 0.1, 
+          col = "red") +
+  tm_shape(callout_lines_sf) +
+  tm_lines(col = "black", 
+           lwd = 1) + # Add call-out lines
+  tm_shape(label_positions_sf) +
+  tm_text("city", 
+          size = 0.8, 
+          col = "black", 
+          fontface = "italic") # Add labels
+
+# Median Age
+title_medage <- "Median Age by Census Tract (classification = quantiles)"
+
+medage_choropleth <- tm_shape(psrc_table, unit = "mi") +
+  tm_polygons("medageE",
+              style = "quantile",
+              palette = c("white","darkblue"),
+              title = "Median Age",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_scale_bar(breaks = c(0, 5, 10, 15, 20), 
+               color.dark = "black",
+               position = c("right","BOTTOM")) +
+  tm_compass(size = 2, position = c("LEFT", "bottom")) +
+  tm_layout(main.title = title_medage, 
+            main.title.size = 0.75,
+            main.title.fontface = "italic",
+            inner.margins = c(0.1,0.1,0.1,0.1),
+            fontfamily = "serif",
+            compass.type = "rose",
+            legend.bg.color = "white",
+            legend.frame = TRUE,
+            legend.position = c("left","top"),
+            legend.title.size = 1) +
+  tm_shape(cities) + # Add dots for Seattle and Tacoma
+  tm_dots(size = 0.1, 
+          col = "red") +
+  tm_shape(callout_lines_sf) +
+  tm_lines(col = "black", 
+           lwd = 1) + # Add call-out lines
+  tm_shape(label_positions_sf) +
+  tm_text("city", 
+          size = 0.8, 
+          col = "black", 
+          fontface = "italic") # Add labels
+```
+
+\newpage
+
+```{r echo=FALSE, fig.cap="Sources: US Census ACS 2022 5-year estimates, Puget Sound Regional Countil, Cities and Towns of the US 2014, via Stanford University; Classification = jenks"}
+popdens_choropleth
+```
+
+As expected, population density is much higher in tracts close to the two cities (and throughout the generally-urban corridor between them). Again, visually comparing this pattern to the one seen for mass transit percentage, a lot matches up. This is not a perfect correspondence, of course.
+
+\newpage
+
+```{r echo=FALSE, fig.cap="Sources: US Census ACS 2022 5-year estimates, Puget Sound Regional Countil, Cities and Towns of the US 2014, via Stanford University; Classification = jenks"}
+medincome_choropleth
+```
+
+I find this map to be particularly interesting. Although it is not incredibly easy to compare this spatial pattern to the mass transit percentage one, I will direct your attention to the high-income area just East of Seattle. Comparing to the transit map, we can see a pretty obvious negative association between income and transit percentage. This provides an initial piece of evidence in favor of the hypothesis that higher income tracts are likely to have lower transit usage. In the same vein, a visual inspection of the tracts directly to the south of the Seattle marker shows an area of comparatively low median income. Again, cross-referencing this with the transit map, we can see this is an area of relatively high transit usage.
+
+```{r echo=FALSE, fig.cap="Sources: US Census ACS 2022 5-year estimates, Puget Sound Regional Countil, Cities and Towns of the US 2014, via Stanford University; Classification = jenks"}
+medage_choropleth
+```
 
 
+**INSERT SOURCES**
 
 
 
