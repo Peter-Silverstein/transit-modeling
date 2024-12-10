@@ -132,8 +132,8 @@ psrc_trips <- tibble(read.csv(here("geo-files","Household_Travel_Survey_Trips.cs
                                         'Other hired service (Uber, Lyft, or other smartphone-app car service)',
                                         "Friend/colleague's car",
                                         'Other vehicle in household',
-                                        'Carshare service (e.g., Turo, Zipcar, ReachNow)'
-                                        ,'Rental car',
+                                        'Carshare service (e.g., Turo, Zipcar, ReachNow)',
+                                        'Rental car',
                                         'Taxi (e.g., Yellow Cab)',
                                         'Household vehicle 4',
                                         'Other motorcycle/moped/scooter',
