@@ -109,7 +109,8 @@ psrc_polygons <- get_acs(state = "WA",
 psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
 
 # Loading my PSRC Household Survey Data
-csv_file <- unzip(here("geo-files","Household_Travel_Survey_Trips.csv.zip"),"Household_Travel_Survey_Trips.csv")
+csv_file <- unzip(here("geo-files", "Household_Travel_Survey_Trips.csv.zip"), 
+                  files = "Household_Travel_Survey_Trips.csv")
 psrc_trips <- tibble(read.csv(here(csv_file)) %>%
   select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
          "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
@@ -228,6 +229,9 @@ cities <- st_as_sf(read_sf(dsn = here("geo-files",
   filter(NAME == "Seattle" | NAME == "Tacoma")
 
 cities <- st_transform(cities, crs = 26910)
+
+# Deleting the unzipped PSRC csv file
+invisible(file.remove(here("Household_Travel_Survey_Trips.csv")))
 ```
 
 ## GIS Methodology Overview
@@ -238,7 +242,15 @@ As mentioned above, I counted the number of trips inside each census tract, then
 For the analysis in this project, I will perform a global cluster analysis (using Moran's I) and visualize any hot and cold zones using Getis-Ord Gi*. These approaches should help me understand whether transit use is clustered and visualize where it is clustered. I will then run a Spatial Error Model (SEM) and a Spatial Lag Model (SLM) regressing mass transit percentage on population density, median income, and median age. I believe that the SEM is the better conceptual choice - I believe that it is likely that unmeasured factors (e.g., land use, transit quality/reliability, parking availability) are spatially correlated, while the idea that ridership in one tract influences another is a bit harder to intuit. That said, I will run both models in order to compare the results.
 
 ### Software Used
-All data loading, cleaning, and manipulation, mapping (both choropleth and Getis-Ord Gi*), table-creation, and analysis write up were performed with R and R-Studio. 
+All data loading, cleaning, and manipulation, mapping (both choropleth and Getis-Ord Gi*), table-creation, regression modeling, and write-up were performed with R and R-Studio. 
+
+# Results and Analysis
+
+## Preliminary Choropleth Map: Mass Transit Trips as a Percentage of Total Trips
+
+```{r}
+masstransit_choropleth <- 
+```
 
 
 
