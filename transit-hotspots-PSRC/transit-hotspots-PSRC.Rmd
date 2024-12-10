@@ -109,9 +109,7 @@ psrc_polygons <- get_acs(state = "WA",
 psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
 
 # Loading my PSRC Household Survey Data
-csv_file <- unzip(here("geo-files", "Household_Travel_Survey_Trips.csv.zip"), 
-                  files = "Household_Travel_Survey_Trips.csv")
-psrc_trips <- tibble(read.csv(here(csv_file)) %>%
+psrc_trips <- tibble(read.csv(here("geo-files","Household_Travel_Survey_Trips.csv")) %>%
   select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
          "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
          "origin_purpose", "dest_purpose", "mode_1", "travelers_total", 
@@ -229,9 +227,6 @@ cities <- st_as_sf(read_sf(dsn = here("geo-files",
   filter(NAME == "Seattle" | NAME == "Tacoma")
 
 cities <- st_transform(cities, crs = 26910)
-
-# Deleting the unzipped PSRC csv file
-invisible(file.remove(here("Household_Travel_Survey_Trips.csv")))
 ```
 
 ## GIS Methodology Overview
@@ -246,10 +241,82 @@ All data loading, cleaning, and manipulation, mapping (both choropleth and Getis
 
 # Results and Analysis
 
-## Preliminary Choropleth Map: Mass Transit Trips as a Percentage of Total Trips
+```{r echo=FALSE}
+title <- "Mass Transit Trips as a % of Total Trips (classification = Jenks)"
 
-```{r}
-masstransit_choropleth <- 
+# Creating callout lines and label positions for the cities
+## Create callout line geometries (offset positions for labels)
+sea_long <- cities$LONGITUDE[1]
+sea_lat <- cities$LATITUDE[1]
+sea_line_long <- sea_long - 0.6
+sea_line_lat <- sea_lat + 0.2
+sea_lab_long <- sea_line_long - 0.03
+sea_lab_lat <- sea_line_lat + 0.04
+
+tac_long <- cities$LONGITUDE[2]
+tac_lat <- cities$LATITUDE[2]
+tac_line_long <- tac_long - 0.4
+tac_line_lat <- tac_lat - 0.2
+tac_lab_long <- tac_line_long - 0.03
+tac_lab_lat <- tac_line_lat - 0.02
+
+callout_lines <- st_sfc(
+  st_linestring(rbind(c(sea_long, sea_lat),
+                      c(sea_line_long, sea_line_lat))), # Seattle
+  st_linestring(rbind(c(tac_long, tac_lat),
+                      c(tac_line_long, tac_line_lat))) # Tacoma
+)
+
+## Convert callout lines to sf object
+callout_lines_sf <- st_sf(city = c("Seattle", "Tacoma"), 
+                          geometry = callout_lines, crs = 4326)
+
+## Create label positions (end of lines)
+label_positions <- data.frame(
+  city = c("Seattle", "Tacoma"),
+  lon = c(sea_lab_long, tac_lab_long), # Label positions (end of lines)
+  lat = c(sea_lab_lat, tac_lab_lat)
+)
+
+## Convert label positions to sf object
+label_positions_sf <- st_as_sf(label_positions, 
+                               coords = c("lon", "lat"), crs = 4326)
+
+# Creating the map
+masstransit_choropleth <- tm_shape(psrc_table, unit = "mi") +
+  tm_polygons("masstransit_perc",
+              style = "jenks",
+              palette = c("white","#003903"),
+              title = "Mass Transit %",
+              border_col = "black",
+              lwd = 0.2) +
+  tm_scale_bar(breaks = c(0, 5, 10, 15, 20), 
+               color.dark = "#003903",
+               position = c("right","BOTTOM")) +
+  tm_compass(size = 2, position = c("LEFT", "bottom")) +
+  tm_layout(main.title = title, 
+            main.title.size = 0.75,
+            main.title.fontface = "italic",
+            inner.margins = c(0.1,0.1,0.1,0.1),
+            fontfamily = "serif",
+            compass.type = "rose",
+            legend.bg.color = "white",
+            legend.frame = TRUE,
+            legend.position = c("left","top"),
+            legend.title.size = 1) +
+  tm_shape(cities) + # Add dots for Seattle and Tacoma
+  tm_dots(size = 0.1, 
+          col = "red") +
+  tm_shape(callout_lines_sf) +
+  tm_lines(col = "black", 
+           lwd = 1) + # Add call-out lines
+  tm_shape(label_positions_sf) +
+  tm_text("city", 
+          size = 0.8, 
+          col = "black", 
+          fontface = "italic") # Add labels
+
+masstransit_choropleth
 ```
 
 
