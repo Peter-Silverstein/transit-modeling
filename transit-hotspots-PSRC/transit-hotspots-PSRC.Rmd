@@ -47,8 +47,11 @@ library(knitr)
 library(spdep) 
 library(spatstat) 
 library(spatialreg)
+library(keyring)
 
-census_api_key("b04657cc5e7bc71a846e61ce45beb0b79b9f069f")
+# Using keyring package to keep my API key hidden
+tidycensus_api_key <- key_get(service = "tidycensus_API", username = "my_tidycensus")
+census_api_key(tidycensus_api_key)
 
 ACSlist <- load_variables(2022, "acs5", cache = TRUE)
 ```
