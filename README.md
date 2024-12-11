@@ -7,7 +7,7 @@ This project is focusing on better understanding public transit in Seattle, Wash
 ![image](https://github.com/user-attachments/assets/ccf558f8-0f24-4c38-88a3-a357c5b9b103)
 
 ## Projects to Check Out
-Currently, there is 1 polished report available in this repository. You can find my analysis of transit hotspots and some regression modeling in the [transit-hotspots-PSRC](transit-hotspots-PSRC) folder
+Currently, there is one polished report available in this repository. You can find my analysis of transit hotspots and some regression modeling in the [transit-hotspots-PSRC](transit-hotspots-PSRC) folder.
 
 ## Agenda
 At an essential level, I am interested in how mass transit in the region services its constituents. This basic idea leads to a huge number of sub-questions, a smattering of which I have outlined below:
