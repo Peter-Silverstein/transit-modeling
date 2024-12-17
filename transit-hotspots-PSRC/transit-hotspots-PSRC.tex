@@ -88,7 +88,7 @@
 
 \title{Transit Usage in Seattle: A Spatial Investigation}
 \author{Peter Silverstein}
-\date{2024-12-11}
+\date{2024-12-17}
 
 \begin{document}
 \maketitle
@@ -447,10 +447,19 @@ their immediate neighbors in terms of their mass transit percentage.
 High tracts are likely to be bordered by other high tracts, and low
 tracts are likely to be bordered by other low tracts. Given that the
 Moran's I statistic ranges from -1 to 1, the 0.193 value only indicates
-moderate positive clustering. That said, the p-value associated with
-this test is \textless{} 0.001, which makes me confident that this
-clustering pattern is not by chance - the likelihood that we would see
-this pattern by chance is incredibly low.
+weak-to-moderate positive clustering. Conceptually, the low bar for
+statistical significance (i.e., the null hypothesis is complete
+randomness, which is intuitively quite unlikely given the higher density
+of transit in more urban areas), combined with a pretty healthy sample
+size of n = 625, makes the fact that the test is statistically
+significant while being somewhat weak a reasonable result. It could also
+be that the choice of weights matrix could play a part in these results,
+but it is hard to say because only one scheme was tested. It may be that
+a distance-based weighting matrix would be a better fit for the
+analysis. All of that said, the p-value associated with this test is
+\textless{} 0.001, which makes me confident that this clustering pattern
+is not by chance - the likelihood that we would see this pattern by
+chance is incredibly low.
 
 While it is useful to know that there is statistically significant
 spatial clustering in our variable of interest with the region, these
@@ -622,6 +631,24 @@ This value is nearly identical to the one for the spatial lag model (as
 are the values of log likelihood and AIC), which indicates similar
 predictive power between the models.
 
+From the relatively low r-squared values and the lack of statistical
+significance in most of my predictors, it is clear to me that this
+analysis would benefit from a new selection of predictor variables. A
+simple first step in this direction would be to do a more thorough
+analysis with the ACS demographic variables, but I think there are
+richer extensions beyond this. There are a plethora of built-environment
+and transportation-relevant variables that could be summarized per
+tract, such as land use percentage (industrial, residential, commercial,
+etc.), parking availability/price, and traffic congestion (particularly
+relevant in Seattle, where buses and at-grade light rail are common),
+among others. Each of these variables are accessible, but would require
+a more involved validation and joining procedure than the ACS census
+tract variables. Nonetheless, I believe the more model complexity is the
+answer here, rather than simplicity. This is particularly true as the
+goal of the analysis is to better understand what impacts transit usage,
+rather than whether a single variable does or does not impact transit
+usage.
+
 \section{Discussion and
 Interpretation}\label{discussion-and-interpretation}
 
@@ -688,11 +715,12 @@ structure of my analysis was such that observation count was lost in
 translation - my response variable was aggregated and in the form of a
 rate. This means that a tract with 5 departures (very likely to be
 noisy) was treated the same as one with 1000 departures (unlikely to be
-noisy). Missingness is a futher issue with sample size - there are a
+noisy). Missingness is a further issue with sample size - there are a
 number of tracts completely omitted from my analysis because they had no
-observations, period. In all honesty, I don't have a great solution for
-this off the top of my head, beyond better and more consistent sample
-collection.
+observations, period. The solution to the problem is not entirely clear
+to me at this stage, although it may be that some sort of multilevel
+modeling or Bayesian approach could at least help me propagate
+uncertainty from the initial calculations through to my final models.
 
 \includegraphics{transit-hotspots-PSRC_files/figure-latex/unnamed-chunk-17-1.pdf}
 
