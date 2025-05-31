@@ -1,0 +1,186 @@
+---
+title: 'Transit Usage in Seattle: A Spatial Investigation'
+author: "Peter Silverstein"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+      toc: false
+      keep_tex: true
+  fontsize: 12pt
+header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}\Huge\bfseries}
+  - \posttitle{\par\end{center}}
+  - \predate{\begin{center}\large}
+  - \postdate{\par\end{center}}
+  - \preauthor{\begin{center}\large}
+  - \postauthor{\par\end{center}}
+  - \usepackage{amsmath}
+  - \usepackage{amsthm}
+  - \usepackage{rotating}
+---
+\begin{center}
+    {\large Final Project}\\[0.5cm]
+    {\large GIS and Spatial Analysis}\\[0.5cm]
+    {\large QMSS5070}\\[0.5cm]
+\end{center}
+
+\newpage
+
+\tableofcontents
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+# Loading Libraries
+library(sf)
+library(tmap)
+library(tidyverse)
+library(tidycensus)
+library(here)
+library(forcats)
+library(knitr)
+library(spdep) 
+library(spatstat) 
+library(spatialreg)
+library(keyring)
+
+# Using keyring package to keep my API key hidden
+tidycensus_api_key <- key_get(service = "tidycensus_API", username = "my_tidycensus")
+census_api_key(tidycensus_api_key)
+
+ACSlist <- load_variables(2022, "acs5", cache = TRUE)
+```
+
+```{r include=FALSE}
+# Loading PSRC Polygons and census data
+psrc_polygons <- get_acs(state = "WA",
+                    county = c("King", "Kitsap", "Pierce", "Snohomish"),
+                          geography = "tract",
+                          variables = c(medincome = "B19013_001",
+                                        population = "B01003_001",
+                                        medage = "B01002_001"),
+                          geometry = TRUE,
+                          keep_geo_vars = TRUE,
+                          year = 2022,
+                          output = "wide"
+                          ) %>%
+  filter(ALAND != 0) %>% # Filter tracts that are 100% water
+  mutate(GEOID = as.double(GEOID))
+psrc_polygons <- st_transform(psrc_polygons, crs = 26910)
+
+# Loading my PSRC Household Survey Data
+psrc_trips <- tibble(read.csv(here("geo-files","Household_Travel_Survey_Trips.csv")) %>%
+  select("trip_id", "household_id", "person_id", "day_id", "travel_dow", 
+         "svy_complete", "distance_miles", "duration_minutes", "speed_mph", 
+         "origin_purpose", "dest_purpose", "mode_1", "travelers_total", 
+         "survey_year", "trip_weight", "origin_tract10", "dest_tract10",
+         "depart_time_hour","arrival_time_hour")) %>%
+  mutate(mode_1 = as.factor(mode_1)) %>%
+  mutate(dest_purpose = as.factor(dest_purpose)) %>%
+  mutate(origin_purpose = as.factor(origin_purpose)) %>%
+  mutate(travel_dow = as.factor(travel_dow)) %>%
+  mutate(svy_complete = as.factor(svy_complete)) %>%
+  mutate(travelers_total = as.factor(travelers_total)) %>%
+  mutate(survey_year = as.factor(survey_year)) %>%
+  # Collapsing the travel mode categories into 4 umbrella categories
+  mutate(mode_collapsed = fct_collapse(mode_1, 
+                    personalvehicle = c('Household vehicle 1',
+                                        'Other non-household vehicle',
+                                        'Car from work',
+                                        'Household vehicle 3',
+                                        'Household vehicle 2',
+                                        'Other hired service (Uber, Lyft, or other smartphone-app car service)',
+                                        "Friend/colleague's car",
+                                        'Other vehicle in household',
+                                        'Carshare service (e.g., Turo, Zipcar, ReachNow)',
+                                        'Rental car',
+                                        'Taxi (e.g., Yellow Cab)',
+                                        'Household vehicle 4',
+                                        'Other motorcycle/moped/scooter',
+                                        'Household vehicle 6',
+                                        'Other motorcycle/moped',
+                                        'Household vehicle 5',
+                                        'Household vehicle 7',
+                                        'Household vehicle 8',
+                                        'Personal scooter or moped (not shared)',
+                                        'Carshare service (e.g., Turo, Zipcar, Getaround, GIG)',
+                                        "Other motorcycle (not my household's)",
+                                        'Other hired car service (e.g., black car, limo)',
+                                        'Other motorcycle in household'),
+                    masstransit = c('Bus (public transit)',
+                                    'Private bus or shuttle',
+                                    'Vanpool',
+                                    'Urban Rail (e.g., Link light rail, monorail)',
+                                    'School bus',
+                                    'Ferry or water taxi',
+                                    'Other rail (e.g., streetcar)',
+                                    'Other bus (rMove only)',
+                                    'Paratransit',
+                                    'Commuter rail (Sounder, Amtrak)',
+                                    'Urban Rail (e.g., Link light rail, monorail, streetcar)',
+                                    'Other rail'),
+                   activetransit = c('Bicycle or e-bike (rSurvey only)',
+                                     'Walk (or jog/wheelchair)',
+                                     'Skateboard or rollerblade',
+                                     "Standard bicycle (my household's)",
+                                     "Electric bicycle (my household's)",
+                                     'Bike-share - electric bicycle',
+                                     'Other rented bicycle',
+                                     "Borrowed bicycle (e.g., a friend's)",
+                                     'Bike-share - standard bicycle',
+                                     'Bike-share bicycle (rMove only)',
+                                     'Bicycle owned by my household (rMove only)',
+                                     'Borrowed bicycle (e.g., from a friend) (rMove only)',
+                                     'Other rented bicycle (rMove only)'),
+                   other = c('Other mode (e.g., skateboard, kayak, motorhome, etc.)',
+                             'Airplane or helicopter',
+                             'Scooter or e-scooter (e.g., Lime, Bird, Razor)',
+                             'Scooter-share (e.g., Bird, Lime)',
+                             'Other scooter, moped, skateboard',
+                             'Vehicle ferry (took vehicle on board)',
+                             'Segway or Onewheel/electric unicycle'))) %>%
+  # Filtering out fishy and irrelevant responses
+  filter(svy_complete == "Complete") %>%
+  filter(distance_miles <= 150) %>%
+  filter(distance_miles > 0) %>%
+  filter(duration_minutes > 0) %>%
+  filter(speed_mph <= 150) %>%
+  filter(mode_1 != "Missing Response")
+
+# Departure count by tract
+departure <- psrc_trips %>%
+  group_by(origin_tract10) %>%
+  summarize(departure_count = n()) %>%
+  rename(GEOID = origin_tract10)
+
+# Mass Transit trip count by departure tract
+masstransit <- psrc_trips %>%
+  filter(mode_collapsed == "masstransit") %>%
+  group_by(dest_tract10) %>%
+  summarize(masstransit_count = n()) %>%
+  rename(GEOID = dest_tract10)
+
+# Joining to the psrc_polygons table
+psrc_table <- psrc_polygons %>%
+  mutate(ALAND_miles = ALAND/2589988) %>% # Converting sq meters->sq miles
+  mutate(pop_per_sqmile = populationE/ALAND_miles) %>%
+  left_join(departure, by = "GEOID") %>%
+  left_join(masstransit, by = "GEOID") %>%
+  # Removing NA values in counts caused by an empty join
+  mutate(
+    departure_count = replace_na(departure_count, 0),
+    masstransit_count = replace_na(masstransit_count, 0)
+    ) %>%
+  filter(departure_count > 0)
+  
+# Calculating mass transit percentage
+psrc_table <- psrc_table %>%
+  mutate(masstransit_perc = (masstransit_count / departure_count)*100) %>%
+  mutate(masstransit_perc = replace_na(masstransit_perc, 0))
+```
+
